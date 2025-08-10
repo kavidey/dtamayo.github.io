@@ -79,7 +79,7 @@
         <div class="row topbot-buffer">
             <div class="col-lg-12">
                 <p class="lead">
-                This tutorial serves two purposes. First, to provide you an introduction to how you can use git to store and share snapshots of your work with the team. Second, for you to change your picture on the Group page and update / remove your title (courtesy of Github's random repository name generator).
+                This tutorial serves two purposes. First, to update our lab webpage, but more importantly, to provide you an introduction to how you can use git to store and share snapshots of your work with the team. 
                 </p>
                 <p class="lead">
                     Git is a version control system. What it does is it lets you save snapshots (called commits) of a given project (called a repository) so you can revert back to previous versions of needed, and so that you can effectively work with a broader team on code by being able to push your changes to others and pull and merge their changes with yours.
@@ -113,7 +113,25 @@
                 </pre>
                 <p class="lead">
                     To add yourself to the group page, we need to 'fork' the <a href="https://github.com/dtamayo/dtamayo.github.io">repository of my webpage</a> (that means make a copy of the repository that you can edit) and do three things:
-                    First, add a jpg or png of yourself in pix/teampix/ (please crop it so it's a square), and add the file to the repo (see tutorial below). Then open group.html, and find your name. Just above it, in the img class line, edit the path in src= to "pix/teampix/yourpicfilename.jpg" with whatever name you gave to the file. Also please add your year and preferred pronouns. Finally, follow the tutorial below to commit your changes and send me a pull request (a request to merge your changes into the main repository).
+                    First, add a jpg or png of yourself in pix/teampix/ (please crop it so it's a square), and add the file to the repo (see tutorial below). Then open group.html. Around line 93, you'll find a line with name="Team", which is the section you want to add yourself in. There are various blocks of code starting with div and ending with /div with different levels of indentation. Your goal is to copy-paste a block just like everybody else's to the bottom of the Team section, just above "Previuos Members" (copy-paste someone else's from the file, I removed the angled brackets so it wouldn't render on this page):
+                </p> 
+                <pre>
+                    <code>
+                        div class="col-sm-3"
+                            figure
+                            img class="img-responsive center-block" src="pix/exoplanets.jpg" alt=""
+                            p class="lead
+                                Dan Tamayo '05 (he/him)
+                            /p
+                            /figure
+                        /div
+                    </code>
+                </pre>
+                <p class="lead">
+                    Each row can only hold four pictures (in the code these are the blocks starting all the way to the left with div class="container" followed by div class="imgRow"), so if the last row is full, you'll have to copy paste the whole previous row's block of code (including all the closing /divs). Edit your name, and just above it, in the img class line, edit the path in src= to "pix/teampix/yourpicfilename.jpg" with whatever name you gave to the file. Also please add your year and preferred pronouns.
+                </p>
+                <p class="lead">
+                    Finally, keep the file open (so you can undo if necessary) and navigate to the directory you're in and double-click group.html to make sure it looks the way it should (in terminal you can use the command open group.html). Lastly, follow the tutorial below to commit your changes and send me a pull request (a request to merge your changes into the main repository).
                 </p>
                 <p class="lead">
                 There are several great tutorials. I like <a href="https://www.freecodecamp.org/news/how-to-make-your-first-pull-request-on-github-3/">this one</a> helping you put together your first pull request, which also includes a link to another tutorial with basic git commands that you will use over and over. Let me know if you run into problems.
