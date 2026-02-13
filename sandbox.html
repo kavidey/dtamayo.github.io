@@ -107,7 +107,7 @@
                 <div id="energy-plot" class="jxgbox" style="width:100%; height:700px;"></div>
                 <div class="text-center" style="margin-top:15px;">
                     <h4>Temperature: <span id="temp-display">10000</span> K</h4>
-                    <input type="range" id="temp-slider" min="3000" max="25000" value="10000" step="100" style="width:80%;">
+                    <input type="range" id="temp-slider" min="3000" max="25000" value="10000" step="100" style="width:100%;">
                 </div>
             </div>
         </div>
@@ -129,16 +129,16 @@
         </div>
         <div class="row topbot-buffer">
             <div class="col-sm-4">
-                <h4 class="text-center">n=2 Fraction vs Temperature</h4>
-                <div id="n2-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+                <h4 class="text-center">Fraction of Neutral H in n=2</h4>
+                <div id="n2-plot" class="jxgbox" style="width:100%; height:500px;"></div>
             </div>
             <div class="col-sm-4">
-                <h4 class="text-center">Ionization Fraction vs Temperature</h4>
-                <div id="ion-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+                <h4 class="text-center">Neutral H Fraction</h4>
+                <div id="ion-plot" class="jxgbox" style="width:100%; height:500px;"></div>
             </div>
             <div class="col-sm-4">
-                <h4 class="text-center">N<sub>2</sub> / N<sub>H,total</sub> vs Temperature</h4>
-                <div id="combined-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+                <h4 class="text-center">Fraction of all H in n=2</h4>
+                <div id="combined-plot" class="jxgbox" style="width:100%; height:500px;"></div>
             </div>
         </div>
     </div>
@@ -248,20 +248,15 @@
         }
 
         // HI fraction label on the left (blue), vertically centered on n=1 ball grid
-        bE.create('text', [2.2,
-            function() {
-                var nBig = Math.floor(boltzmann(getT())[0] * 100);
-                var nRows = Math.max(1, Math.ceil(nBig / 10));
-                return (nRows - 1) * 0.46 / 2;
-            },
+        bE.create('text', [5.4, 7,
             function(){ return 'HI: ' + ((1-saha(getT()))*100).toFixed(2) + '%'; }
-        ], {fontSize:16, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
+        ], {fontSize:24, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
             strokeColor:neutralColor, cssStyle:'font-weight:bold'});
 
         // HII fraction label on the left (red), above ionization line (text only, no balls)
-        bE.create('text', [2.2, 14.5,
+        bE.create('text', [5.4, 14.5,
             function(){ return 'HII: ' + (saha(getT())*100).toFixed(2) + '%'; }
-        ], {fontSize:16, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
+        ], {fontSize:24, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
             strokeColor:ionizedColor, cssStyle:'font-weight:bold'});
 
         // Level labels on the right showing Boltzmann fractions of bound H
@@ -388,134 +383,99 @@
         // Initial computation
         computeBalls();
 
-        // --- n=2 fraction vs temperature plot ---
-        var bN2 = JXG.JSXGraph.initBoard('n2-plot', {
-            boundingbox: [3000, 0.00055, 27000, -0.00005],
-            axis: false, showNavigation: false, showCopyright: false,
-            pan:{enabled:false}, zoom:{enabled:false}
-        });
-
-        // Find max n=2 fraction in range for scaling
-        var n2Max = 0;
-        for (var t = 5000; t <= 25000; t += 100) {
-            var val = boltzmann(t)[1];
-            if (val > n2Max) n2Max = val;
-        }
-        // Round up for nice axis
-        var n2Ceil = Math.ceil(n2Max * 20000) / 20000;
-        bN2.setBoundingBox([3000, n2Ceil * 1.15, 27000, -n2Ceil * 0.08]);
-
-        // Axes
-        bN2.create('axis', [[5000, 0], [25000, 0]], {
-            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
-                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
-        });
-        bN2.create('axis', [[5000, 0], [5000, 1]], {
-            ticks:{insertTicks:true, minorTicks:4, drawLabels:true,
-                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
-        });
-
-        // Axis labels
-        bN2.create('text', [16000, -n2Ceil*0.05, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
-        bN2.create('text', [3800, n2Ceil*0.6, 'N\u2082/N'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
-
-        // n=2 fraction curve
-        bN2.create('functiongraph', [function(T){ return boltzmann(T)[1]; }, 5000, 25000],
-            {strokeColor:'#377eb8', strokeWidth:2.5, highlight:false});
-
-        // Vertical marker at current temperature
-        var n2Marker = bN2.create('line', [
-            [function(){return getT();}, 0],
-            [function(){return getT();}, 1]
-        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
-
-        // Dot on curve at current T
-        bN2.create('point', [function(){return getT();}, function(){return boltzmann(getT())[1];}],
-            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
-
-        // --- Ionization fraction vs temperature plot ---
-        var bI = JXG.JSXGraph.initBoard('ion-plot', {
-            boundingbox: [3000, 1.15, 27000, -0.1],
-            axis: false, showNavigation: false, showCopyright: false,
-            pan:{enabled:false}, zoom:{enabled:false}
-        });
-
-        // Axes
-        bI.create('axis', [[5000, 0], [25000, 0]], {
-            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
-                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
-        });
-        bI.create('axis', [[5000, 0], [5000, 1]], {
-            ticks:{insertTicks:false, ticksDistance:0.2, minorTicks:1, drawLabels:true,
-                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
-        });
-
-        // Axis labels
-        bI.create('text', [16000, -0.06, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
-        bI.create('text', [3800, 0.55, 'x'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
-
-        // Ionization fraction curve
-        bI.create('functiongraph', [function(T){ return saha(T); }, 5000, 25000],
-            {strokeColor:'#e41a1c', strokeWidth:2.5, highlight:false});
-
-        // Vertical marker at current temperature
-        bI.create('line', [
-            [function(){return getT();}, 0],
-            [function(){return getT();}, 1]
-        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
-
-        // Dot on curve at current T
-        bI.create('point', [function(){return getT();}, function(){return saha(getT());}],
-            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
-
-        // --- Combined: N_2 / N_H,total vs temperature ---
+        // --- Combined function (needed before log plots) ---
         // N_2/N_H,total = (N_2/N_neutral) * (N_neutral/N_total) = boltzmann[1] * (1 - saha)
         function combined(T) {
             return boltzmann(T)[1] * (1 - saha(T));
         }
 
-        var bC = JXG.JSXGraph.initBoard('combined-plot', {
-            boundingbox: [3000, 0.00055, 27000, -0.00005],
-            axis: false, showNavigation: false, showCopyright: false,
-            pan:{enabled:false}, zoom:{enabled:false}
-        });
-
-        // Find max in range for scaling
-        var cMax = 0;
-        for (var t = 5000; t <= 25000; t += 100) {
-            var val = combined(t);
-            if (val > cMax) cMax = val;
+        // --- Log-scale plot helper ---
+        var logTickFontSize = 16;
+        var logAxisFontSize = 18;
+        var logMinClamp = -12;
+        var logMaxClamp = 0;
+        function unicodeSuperscript(n) {
+            var digits = '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079';
+            var s = n < 0 ? '\u207B' : '';
+            var abs = Math.abs(n).toString();
+            for (var i = 0; i < abs.length; i++) s += digits[parseInt(abs[i])];
+            return '10' + s;
         }
-        var cCeil = Math.ceil(cMax * 20000) / 20000;
-        bC.setBoundingBox([3000, cCeil * 1.15, 27000, -cCeil * 0.08]);
 
-        // Axes
-        bC.create('axis', [[5000, 0], [25000, 0]], {
-            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
-                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
-        });
-        bC.create('axis', [[5000, 0], [5000, 1]], {
-            ticks:{insertTicks:true, minorTicks:4, drawLabels:true,
-                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
-        });
+        function safeLog10(v) {
+            return v > 0 ? Math.max(Math.log10(v), logMinClamp) : logMinClamp;
+        }
 
-        // Axis labels
-        bC.create('text', [16000, -cCeil*0.05, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
-        bC.create('text', [3800, cCeil*0.6, 'N\u2082/N\u2095'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+        function createLogPlot(boardId, dataFn, curveColor) {
+            // Determine y range from data
+            var yLogMax = logMinClamp;
+            var yLogMin = logMaxClamp;
+            for (var t = 5000; t <= 25000; t += 50) {
+                var lv = safeLog10(dataFn(t));
+                if (lv > yLogMax) yLogMax = lv;
+                if (lv < yLogMin) yLogMin = lv;
+            }
+            yLogMax = Math.ceil(yLogMax);
+            yLogMin = Math.floor(yLogMin);
 
-        // Combined curve
-        bC.create('functiongraph', [function(T){ return combined(T); }, 5000, 25000],
-            {strokeColor:'#984ea3', strokeWidth:2.5, highlight:false});
+            var xDataMin = 5000, xDataMax = 25000;
+            var xRange = xDataMax - xDataMin;
+            var yRange = yLogMax - yLogMin;
 
-        // Vertical marker
-        bC.create('line', [
-            [function(){return getT();}, 0],
-            [function(){return getT();}, 1]
-        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
+            var board = JXG.JSXGraph.initBoard(boardId, {
+                boundingbox: [xDataMin - xRange * 0.28, yLogMax + yRange * 0.1,
+                              xDataMax + xRange * 0.08, yLogMin - yRange * 0.25],
+                axis: false, showNavigation: false, showCopyright: false,
+                pan:{enabled:false}, zoom:{enabled:false}
+            });
 
-        // Dot on curve
-        bC.create('point', [function(){return getT();}, function(){return combined(getT());}],
-            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
+            // X-axis line
+            board.create('segment', [[xDataMin, yLogMin], [xDataMax, yLogMin]],
+                {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+            // X-axis ticks and labels
+            for (var t = 5000; t <= 25000; t += 5000) {
+                board.create('segment', [[t, yLogMin], [t, yLogMin - yRange * 0.025]],
+                    {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+                board.create('text', [t, yLogMin - yRange * 0.06, (t/1000) + 'k'],
+                    {fontSize:logTickFontSize, anchorX:'middle', anchorY:'top', fixed:true, highlight:false});
+            }
+            // X-axis label
+            board.create('text', [15000, yLogMin - yRange * 0.18, 'Temperature (K)'],
+                {fontSize:logAxisFontSize, anchorX:'middle', fixed:true, highlight:false});
+
+            // Y-axis line
+            board.create('segment', [[xDataMin, yLogMin], [xDataMin, yLogMax]],
+                {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+            // Y-axis ticks and labels
+            var yStep = yRange > 8 ? 2 : 1;
+            for (var ly = Math.ceil(yLogMin / yStep) * yStep; ly <= yLogMax; ly += yStep) {
+                board.create('segment', [[xDataMin, ly], [xDataMin - xRange * 0.015, ly]],
+                    {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+                var lbl = (ly === 0) ? '1' : unicodeSuperscript(ly);
+                board.create('text', [xDataMin - xRange * 0.035, ly, lbl],
+                    {fontSize:logTickFontSize, anchorX:'right', anchorY:'middle', fixed:true, highlight:false});
+            }
+            // Function curve (log scale)
+            board.create('functiongraph', [function(T) { return safeLog10(dataFn(T)); }, xDataMin, xDataMax],
+                {strokeColor:curveColor, strokeWidth:2.5, highlight:false});
+
+            // Temperature marker line
+            board.create('line', [
+                [function(){return getT();}, yLogMin],
+                [function(){return getT();}, yLogMax]
+            ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
+
+            // Dot on curve
+            board.create('point', [function(){return getT();}, function(){return safeLog10(dataFn(getT()));}],
+                {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:'', withLabel:false});
+
+            return board;
+        }
+
+        // Create the three log-scale plots
+        var bN2 = createLogPlot('n2-plot', function(T){ return boltzmann(T)[1]; }, '#377eb8');
+        var bI = createLogPlot('ion-plot', function(T){ return 1 - saha(T); }, '#e41a1c');
+        var bC = createLogPlot('combined-plot', combined, '#984ea3');
 
         // Update all plots on slider change
         slider.addEventListener('input', function() {
