@@ -16,6 +16,10 @@
     <!-- Custom CSS -->
     <link href="css/landing-page.css" rel="stylesheet">
 
+    <!-- JSXGraph -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+
     <!-- Custom Fonts -->
     <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
     <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
@@ -86,6 +90,59 @@
         </div>
     </div>
 
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <hr class="section-heading-spacer">
+                <div class="clearfix"></div>
+                <h2 class="section-heading">Stellar Atmospheres</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row topbot-buffer">
+            <div class="col-sm-10 col-sm-offset-1">
+                <h4 class="text-center">Hydrogen Energy Levels & Ionization States</h4>
+                <div id="energy-plot" class="jxgbox" style="width:100%; height:700px;"></div>
+                <div class="text-center" style="margin-top:15px;">
+                    <h4>Temperature: <span id="temp-display">10000</span> K</h4>
+                    <input type="range" id="temp-slider" min="3000" max="25000" value="10000" step="100" style="width:80%;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <hr class="section-heading-spacer">
+                <div class="clearfix"></div>
+                <h2 class="section-heading">Balmer Line Strength</h2>
+            </div>
+        </div>
+        <div class="row topbot-buffer">
+            <div class="col-lg-12">
+                <p class="lead">
+                </p>
+            </div>
+        </div>
+        <div class="row topbot-buffer">
+            <div class="col-sm-4">
+                <h4 class="text-center">n=2 Fraction vs Temperature</h4>
+                <div id="n2-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+            </div>
+            <div class="col-sm-4">
+                <h4 class="text-center">Ionization Fraction vs Temperature</h4>
+                <div id="ion-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+            </div>
+            <div class="col-sm-4">
+                <h4 class="text-center">N<sub>2</sub> / N<sub>H,total</sub> vs Temperature</h4>
+                <div id="combined-plot" class="jxgbox" style="width:100%; height:400px;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer>
         <div class="container">
@@ -102,6 +159,375 @@
 
     <!-- Bootstrap Core JavaScript -->
     <script src="js/bootstrap.min.js"></script>
+
+    <!-- Stellar Atmospheres Visualization -->
+    <script>
+    (function() {
+        // Physical constants
+        var kB_eV = 8.617e-5;  // Boltzmann constant (eV/K)
+        var chi = 13.6;         // H ionization energy (eV)
+        var nMax = 6;           // Energy levels to show
+        var ne = 2.5e20;        // H number density (m^-3), typical photosphere
+
+        var slider = document.getElementById('temp-slider');
+        var display = document.getElementById('temp-display');
+        function getT() { return parseFloat(slider.value); }
+
+        // Boltzmann level populations (returns array of fractions)
+        function boltzmann(T) {
+            var kT = kB_eV * T;
+            var raw = [], sum = 0;
+            for (var n = 1; n <= nMax; n++) {
+                var g = 2 * n * n;
+                var dE = chi * (1 - 1/(n*n));
+                var v = g * Math.exp(-dE / kT);
+                raw.push(v);
+                sum += v;
+            }
+            return raw.map(function(v) { return v / sum; });
+        }
+
+        // Saha ionization fraction for hydrogen
+        function saha(T) {
+            var kB = 1.381e-23, h = 6.626e-34, me = 9.109e-31;
+            var chiJ = chi * 1.602e-19;
+            var kT = kB * T, kTeV = kB_eV * T;
+            if (kT < 1e-30) return 0;
+            // Partition function of neutral H
+            var ZHI = 0;
+            for (var n = 1; n <= nMax; n++)
+                ZHI += 2*n*n * Math.exp(-chi*(1-1/(n*n)) / kTeV);
+            // N_II/N_I = (1/ne) * (2*pi*me*kT/h^2)^(3/2) * (2*Z_II/Z_HI) * exp(-chi/kT)
+            var ratio = (1/ne) * Math.pow(2*Math.PI*me*kT/(h*h), 1.5) * 2/ZHI * Math.exp(-chiJ/kT);
+            // N_II/N = (N_II/N_I) / (1 + N_II/N_I)
+            var x = ratio / (1 + ratio);
+            return Math.max(0, Math.min(1, x));
+        }
+
+        // --- Combined energy level & ionization plot ---
+        var energies = [];
+        for (var i = 1; i <= nMax; i++) energies.push(chi * (1 - 1/(i*i)));
+
+        // Colors: blue for neutral (HI), red for ionized (HII)
+        var neutralColor = '#377eb8';
+        var ionizedColor = '#e41a1c';
+
+        var levelDefs = [
+            {idx: [0], energy: energies[0], label: 'n=1'},
+            {idx: [1], energy: energies[1], label: 'n=2'},
+            {idx: [2], energy: energies[2], label: 'n=3'},
+            {idx: [3], energy: energies[3], label: 'n=4'},
+            {idx: [4,5], energy: 13.3, label: 'n\u22655'}
+        ];
+
+        var bE = JXG.JSXGraph.initBoard('energy-plot', {
+            boundingbox: [-2.5, 15.5, 10.5, -1.5],
+            axis: false, showNavigation: false, showCopyright: false,
+            pan:{enabled:false}, zoom:{enabled:false}
+        });
+
+        // Y-axis (energy)
+        bE.create('segment', [[0.3, -0.5], [0.3, 14.5]], {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+        for (var e = 0; e <= 14; e += 2) {
+            bE.create('segment', [[0.15, e], [0.45, e]], {strokeColor:'#333', strokeWidth:1, fixed:true, highlight:false});
+            bE.create('text', [-0.1, e, e.toString()], {fontSize:14, anchorX:'right', anchorY:'middle', fixed:true, highlight:false});
+        }
+        bE.create('text', [-1.5, 7, 'Energy (eV)'], {fontSize:15, anchorX:'middle', fixed:true, highlight:false});
+
+        // Ionization limit dashed line
+        bE.create('segment', [[0.3, 13.6], [10.0, 13.6]], {strokeColor:'#999', strokeWidth:1, dash:2, fixed:true, highlight:false});
+        bE.create('text', [0.5, 14.0, '13.6 eV'], {fontSize:14, anchorX:'left', fixed:true, highlight:false});
+
+        // Format percentage for display
+        function fmtPct(frac) {
+            var pct = frac * 100;
+            if (pct >= 10) return pct.toFixed(1) + '%';
+            if (pct >= 0.01) return pct.toFixed(3) + '%';
+            if (pct >= 1e-6) return pct.toExponential(1) + '%';
+            return '~0%';
+        }
+
+        // HI fraction label on the left (blue), vertically centered on n=1 ball grid
+        bE.create('text', [2.2,
+            function() {
+                var nBig = Math.floor(boltzmann(getT())[0] * 100);
+                var nRows = Math.max(1, Math.ceil(nBig / 10));
+                return (nRows - 1) * 0.46 / 2;
+            },
+            function(){ return 'HI: ' + ((1-saha(getT()))*100).toFixed(2) + '%'; }
+        ], {fontSize:16, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
+            strokeColor:neutralColor, cssStyle:'font-weight:bold'});
+
+        // HII fraction label on the left (red), above ionization line (text only, no balls)
+        bE.create('text', [2.2, 14.5,
+            function(){ return 'HII: ' + (saha(getT())*100).toFixed(2) + '%'; }
+        ], {fontSize:16, anchorX:'right', anchorY:'middle', fixed:true, highlight:false,
+            strokeColor:ionizedColor, cssStyle:'font-weight:bold'});
+
+        // Level labels on the right showing Boltzmann fractions of bound H
+        for (var i = 0; i < levelDefs.length; i++) {
+            (function(def) {
+                bE.create('text', [7.5, def.energy,
+                    function() {
+                        var pops = boltzmann(getT());
+                        var popSum = 0;
+                        for (var j = 0; j < def.idx.length; j++) popSum += pops[def.idx[j]];
+                        return def.label + ': ' + fmtPct(popSum);
+                    }
+                ], {fontSize:16, anchorX:'left', anchorY:'middle', fixed:true, highlight:false,
+                    strokeColor:neutralColor});
+            })(levelDefs[i]);
+        }
+
+        // --- Ball visualization ---
+        // Big balls (each = 1% of bound H), small balls (each = 0.1%) for remainders
+        // All levels get balls; 10 small balls auto-consolidate into 1 big ball
+        var bigBallSize = 6;
+        var smallBallSize = 3;
+        var maxPoints = 160;
+        var spacing = 0.46;
+        var smallSpacing = 0.35;
+        var ballsPerRow = 10;
+        var gridStartX = 2.5;
+
+        var pointData = [];
+        for (var b = 0; b < maxPoints; b++) {
+            pointData.push({x: -5, y: -5, size: 0});
+        }
+
+        function computeBalls() {
+            var pops = boltzmann(getT());
+            var pIdx = 0;
+
+            for (var lev = 0; lev < levelDefs.length; lev++) {
+                var frac = 0;
+                for (var j = 0; j < levelDefs[lev].idx.length; j++) {
+                    frac += pops[levelDefs[lev].idx[j]];
+                }
+                var yBase = levelDefs[lev].energy;
+                var nBig = Math.floor(frac * 100);
+                var nSmallFull = Math.floor(frac * 1000 - nBig * 10);
+
+                if (lev === 0) {
+                    // n=1: multi-row grid of big balls
+                    for (var k = 0; k < nBig && pIdx < maxPoints; k++) {
+                        pointData[pIdx].x = gridStartX + (k % ballsPerRow) * spacing;
+                        pointData[pIdx].y = yBase + Math.floor(k / ballsPerRow) * spacing;
+                        pointData[pIdx].size = bigBallSize;
+                        pIdx++;
+                    }
+                    // Small balls only if level is below 5%
+                    if (frac < 0.05) {
+                        var lastBigRow = nBig > 0 ? Math.floor((nBig - 1) / ballsPerRow) : 0;
+                        var lastBigCol = nBig > 0 ? (nBig - 1) % ballsPerRow : -1;
+                        var smallStartX, smallRowY;
+                        if (nBig === 0 || lastBigCol === ballsPerRow - 1) {
+                            smallStartX = gridStartX;
+                            smallRowY = yBase + (nBig > 0 ? lastBigRow + 1 : 0) * spacing;
+                        } else {
+                            smallStartX = gridStartX + (lastBigCol + 1) * spacing;
+                            smallRowY = yBase + lastBigRow * spacing;
+                        }
+                        for (var k = 0; k < nSmallFull && pIdx < maxPoints; k++) {
+                            pointData[pIdx].x = smallStartX + k * smallSpacing;
+                            pointData[pIdx].y = smallRowY;
+                            pointData[pIdx].size = smallBallSize;
+                            pIdx++;
+                        }
+                    }
+                } else {
+                    // Excited states: single row, big balls then small balls
+                    var nBigShow = Math.min(nBig, ballsPerRow);
+                    for (var k = 0; k < nBigShow && pIdx < maxPoints; k++) {
+                        pointData[pIdx].x = gridStartX + k * spacing;
+                        pointData[pIdx].y = yBase;
+                        pointData[pIdx].size = bigBallSize;
+                        pIdx++;
+                    }
+                    // Small balls only if level is below 5% and room in row
+                    if (frac < 0.05 && nBigShow < ballsPerRow) {
+                        var sStartX = gridStartX + nBigShow * spacing;
+                        for (var k = 0; k < nSmallFull && pIdx < maxPoints; k++) {
+                            pointData[pIdx].x = sStartX + k * smallSpacing;
+                            pointData[pIdx].y = yBase;
+                            pointData[pIdx].size = smallBallSize;
+                            pIdx++;
+                        }
+                    }
+                }
+            }
+
+            // Hide remaining points off-screen
+            for (var i = pIdx; i < maxPoints; i++) {
+                pointData[i].x = -5;
+                pointData[i].y = -5;
+                pointData[i].size = 0;
+            }
+            for (var i = 0; i < maxPoints; i++) {
+                ballPoints[i].setAttribute({size: pointData[i].size});
+            }
+        }
+
+        // Create all ball points (unified pool)
+        var ballPoints = [];
+        for (var b = 0; b < maxPoints; b++) {
+            (function(idx) {
+                var pt = bE.create('point', [
+                    function() { return pointData[idx].x; },
+                    function() { return pointData[idx].y; }
+                ], {
+                    size: 0, face: 'o',
+                    fillColor: neutralColor, strokeColor: neutralColor,
+                    fillOpacity: 0.85, strokeWidth: 1,
+                    fixed: true, highlight: false, name: '', withLabel: false
+                });
+                ballPoints.push(pt);
+            })(b);
+        }
+
+        // Initial computation
+        computeBalls();
+
+        // --- n=2 fraction vs temperature plot ---
+        var bN2 = JXG.JSXGraph.initBoard('n2-plot', {
+            boundingbox: [3000, 0.00055, 27000, -0.00005],
+            axis: false, showNavigation: false, showCopyright: false,
+            pan:{enabled:false}, zoom:{enabled:false}
+        });
+
+        // Find max n=2 fraction in range for scaling
+        var n2Max = 0;
+        for (var t = 5000; t <= 25000; t += 100) {
+            var val = boltzmann(t)[1];
+            if (val > n2Max) n2Max = val;
+        }
+        // Round up for nice axis
+        var n2Ceil = Math.ceil(n2Max * 20000) / 20000;
+        bN2.setBoundingBox([3000, n2Ceil * 1.15, 27000, -n2Ceil * 0.08]);
+
+        // Axes
+        bN2.create('axis', [[5000, 0], [25000, 0]], {
+            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
+                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
+        });
+        bN2.create('axis', [[5000, 0], [5000, 1]], {
+            ticks:{insertTicks:true, minorTicks:4, drawLabels:true,
+                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
+        });
+
+        // Axis labels
+        bN2.create('text', [16000, -n2Ceil*0.05, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+        bN2.create('text', [3800, n2Ceil*0.6, 'N\u2082/N'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+
+        // n=2 fraction curve
+        bN2.create('functiongraph', [function(T){ return boltzmann(T)[1]; }, 5000, 25000],
+            {strokeColor:'#377eb8', strokeWidth:2.5, highlight:false});
+
+        // Vertical marker at current temperature
+        var n2Marker = bN2.create('line', [
+            [function(){return getT();}, 0],
+            [function(){return getT();}, 1]
+        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
+
+        // Dot on curve at current T
+        bN2.create('point', [function(){return getT();}, function(){return boltzmann(getT())[1];}],
+            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
+
+        // --- Ionization fraction vs temperature plot ---
+        var bI = JXG.JSXGraph.initBoard('ion-plot', {
+            boundingbox: [3000, 1.15, 27000, -0.1],
+            axis: false, showNavigation: false, showCopyright: false,
+            pan:{enabled:false}, zoom:{enabled:false}
+        });
+
+        // Axes
+        bI.create('axis', [[5000, 0], [25000, 0]], {
+            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
+                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
+        });
+        bI.create('axis', [[5000, 0], [5000, 1]], {
+            ticks:{insertTicks:false, ticksDistance:0.2, minorTicks:1, drawLabels:true,
+                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
+        });
+
+        // Axis labels
+        bI.create('text', [16000, -0.06, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+        bI.create('text', [3800, 0.55, 'x'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+
+        // Ionization fraction curve
+        bI.create('functiongraph', [function(T){ return saha(T); }, 5000, 25000],
+            {strokeColor:'#e41a1c', strokeWidth:2.5, highlight:false});
+
+        // Vertical marker at current temperature
+        bI.create('line', [
+            [function(){return getT();}, 0],
+            [function(){return getT();}, 1]
+        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
+
+        // Dot on curve at current T
+        bI.create('point', [function(){return getT();}, function(){return saha(getT());}],
+            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
+
+        // --- Combined: N_2 / N_H,total vs temperature ---
+        // N_2/N_H,total = (N_2/N_neutral) * (N_neutral/N_total) = boltzmann[1] * (1 - saha)
+        function combined(T) {
+            return boltzmann(T)[1] * (1 - saha(T));
+        }
+
+        var bC = JXG.JSXGraph.initBoard('combined-plot', {
+            boundingbox: [3000, 0.00055, 27000, -0.00005],
+            axis: false, showNavigation: false, showCopyright: false,
+            pan:{enabled:false}, zoom:{enabled:false}
+        });
+
+        // Find max in range for scaling
+        var cMax = 0;
+        for (var t = 5000; t <= 25000; t += 100) {
+            var val = combined(t);
+            if (val > cMax) cMax = val;
+        }
+        var cCeil = Math.ceil(cMax * 20000) / 20000;
+        bC.setBoundingBox([3000, cCeil * 1.15, 27000, -cCeil * 0.08]);
+
+        // Axes
+        bC.create('axis', [[5000, 0], [25000, 0]], {
+            ticks:{insertTicks:false, ticksDistance:5000, minorTicks:4, drawLabels:true,
+                label:{offset:[0,-15], anchorX:'middle', fontSize:13}}
+        });
+        bC.create('axis', [[5000, 0], [5000, 1]], {
+            ticks:{insertTicks:true, minorTicks:4, drawLabels:true,
+                label:{offset:[-10,0], anchorX:'right', fontSize:13}}
+        });
+
+        // Axis labels
+        bC.create('text', [16000, -cCeil*0.05, 'Temperature (K)'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+        bC.create('text', [3800, cCeil*0.6, 'N\u2082/N\u2095'], {fontSize:14, anchorX:'middle', fixed:true, highlight:false});
+
+        // Combined curve
+        bC.create('functiongraph', [function(T){ return combined(T); }, 5000, 25000],
+            {strokeColor:'#984ea3', strokeWidth:2.5, highlight:false});
+
+        // Vertical marker
+        bC.create('line', [
+            [function(){return getT();}, 0],
+            [function(){return getT();}, 1]
+        ], {strokeColor:'#999', strokeWidth:1, dash:2, straightFirst:false, straightLast:false, fixed:true, highlight:false});
+
+        // Dot on curve
+        bC.create('point', [function(){return getT();}, function(){return combined(getT());}],
+            {size:4, fillColor:'#e41a1c', strokeColor:'#e41a1c', fixed:true, highlight:false, name:''});
+
+        // Update all plots on slider change
+        slider.addEventListener('input', function() {
+            display.textContent = this.value;
+            computeBalls();
+            bE.update();
+            bN2.update();
+            bI.update();
+            bC.update();
+        });
+    })();
+    </script>
 
 </body>
 </html>
