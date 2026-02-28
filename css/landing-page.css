@@ -9,6 +9,10 @@
     align-items: center;
 }
 
+.imgRow img, .imgrow img {
+    width: 100%;
+}
+
 body,
 html {
     width: 100%;
