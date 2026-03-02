@@ -170,16 +170,16 @@ sim.ri_whfast512.coordinates = &quot;jacobi&quot;     # use jacobic coordinates 
 </code></pre>
                 <p>It will open in a new window on <em>your</em> computer where you can sign in with your HMC
                     credentials:</p>
-                <img src="img/hopper-tutorial/e53ff92b-8b35-4225-8b12-e49441ca7df5.png"
+                <img src="img/hopper-tutorial/duo.png"
                     alt="CleanShot 2025-09-30 at 13.47.39@2x.png" class="img-responsive">
                 <p>When you are done logging in, the window will close and you will be asked to enter your password</p>
-                <img src="img/hopper-tutorial/75474aab-1d27-44d6-9cfe-048a3244591c.png"
+                <img src="img/hopper-tutorial/successful-connection.png"
                     alt="CleanShot 2025-09-30 at 13.53.05@2x.png" class="img-responsive">
                 <p>After entering your password you should see a bunch of logs, ending with
                     <code>Established DTSL connection</code> and the date that the session authentication expires.
                 </p>
                 <p>The VPN will create a new network interface (see the list with <code>ip addr show</code> )</p>
-                <img src="img/hopper-tutorial/CleanShot_2025-09-30_at_13.55.242x.png"
+                <img src="img/hopper-tutorial/tun-ip-addr.png"
                     alt="CleanShot 2025-09-30 at 13.55.24@2x.png" class="img-responsive">
                 <p>This is the only one that can communicate with hopper, so if you try to ping
                     <code>hopper.mckenna.edu</code> it will not work since that uses the default <code>enxb03af…</code>
@@ -223,7 +223,7 @@ pip install &#39;openconnect-sso[full]&#39; # in your python virtualenv
 </code></pre>
                 <p>A bunch of stuff will print out, but what you care about is the part at the bottom referring to
                     missing <code>.so</code> files. </p>
-                <img src="img/hopper-tutorial/CleanShot_2025-09-30_at_21.04.102x.png"
+                <img src="img/hopper-tutorial/debugging.png"
                     alt="CleanShot 2025-09-30 at 21.04.10@2x.png" class="img-responsive">
                 <p>Continue installing dependencies until it stops throwing errors, and a HMC login window appears on
                     your screen. <code>sudo apt-cache search</code> can be useful for finding the packages corresponding
